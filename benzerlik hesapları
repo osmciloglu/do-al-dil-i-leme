@@ -1,0 +1,43 @@
+import pandas as pd
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+
+# CSV dosyalarını oku
+car_models_df = pd.read_csv("islenmis_car_models.csv")
+investigations_df = pd.read_csv("islenmis_investigations.csv")
+
+# Araç ve investigation metinlerini oluştur
+car_models_df['text'] = (
+    car_models_df['make'].astype(str) + " " +
+    car_models_df['model'].astype(str) + " " +
+    car_models_df['modelYear'].astype(str)
+)
+
+investigations_df['text'] = (
+    investigations_df['MAKE'].astype(str) + " " +
+    investigations_df['MODEL'].astype(str) + " " +
+    investigations_df['YEAR'].astype(str) + " " +
+    investigations_df['SUMMARY'].astype(str)
+)
+
+# TF-IDF vektörlerini oluştur
+vectorizer = TfidfVectorizer(stop_words='english')
+car_vectors = vectorizer.fit_transform(car_models_df['text'])
+investigation_vectors = vectorizer.transform(investigations_df['text'])
+
+# Cosine similarity hesapla
+similarities = cosine_similarity(car_vectors, investigation_vectors)
+
+# Her araç için en benzer 5 investigation kaydını bul
+top_5_similar_indices = similarities.argsort(axis=1)[:, -5:][:, ::-1]
+
+# Örnek: İlk araç için en benzer kayıtları yazdır
+first_car = car_models_df.iloc[0]
+print("Araç:", first_car['make'], first_car['model'], first_car['modelYear'])
+print("\nEn Benzer 5 Investigation:")
+
+for i, idx in enumerate(top_5_similar_indices[0]):
+    investigation = investigations_df.iloc[idx]
+    score = similarities[0, idx]
+    print(f"{i+1}. {investigation['MAKE']} {investigation['MODEL']} {investigation['YEAR']} - Skor: {score:.4f}")
+    print("Özet:", investigation['SUMMARY'][:200], "...\n")
