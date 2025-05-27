@@ -1,155 +1,58 @@
-# do-al-dil-i-leme
-proje 1
-Bu proje, araç model verilerinin metin işleme teknikleriyle (stemming ve lemmatization) standardize edilmesini amaçlamaktadır. Özellikle:
+ÇALIŞTIRMA TALİMATLARI ; 
 
-Otomotiv veri analizi
+1. Gerekli kütüphaneleri yükle
+İlk hücreye pandas, sklearn, numpy gibi kütüphaneleri içe aktaran kodları yaz. Bu kütüphaneler olmadan TF-IDF ve benzerlik hesaplaması yapılamaz.
 
-Model tabanlı sınıflandırma sistemleri
+2. investigations.csv dosyasını Jupyter Notebook ortamına yükle
+Dosyan bilgisayarında varsa aynı klasöre koy ve pd.read_csv("investigations.csv") komutunu kullanarak oku. Dosya yolu doğru olmalı.
 
-Arama motoru optimizasyonu
+3. SUMMARY sütunundaki eksik verileri temizle
+Bazı satırlarda özet metni eksik olabilir. Bu nedenle fillna("") ile boş metinlerle doldurman gerekir. Aksi halde TF-IDF kodu hata verir.
 
-gibi uygulamalarda kullanılmak üzere temizlenmiş bir veri seti üretir.
+4. TF-IDF vektörleştirme işlemini yap
+TfidfVectorizer kullanarak metinleri sayısal vektörlere dönüştür. Bu adımda İngilizce durdurma kelimeleri hariç tutulur ve maksimum 1000 kelime ile sınırlı tutulur.
 
-Kullanılan Veri Seti
-car_models.csv
-İçerik: Araç modellerine ait yıl, marka ve model bilgileri
+5. Cosine similarity matrisini oluştur
+cosine_similarity fonksiyonu ile her metin ile diğer metinler arasındaki benzerliği hesapla. Sonuç, metin sayısı kadar satır ve sütun içeren bir benzerlik matrisi olur.
 
-Örnek Veri:
+6. İlk metin için en benzer 5 metni bul
+Benzerlik matrisinden 0. sıradaki metinle en yüksek benzerliğe sahip diğer 5 metni sırala. np.argsort fonksiyonunu kullanarak en yüksek skorlara göre sıralama yap.
 
-csv
-modelYear,make,model
-2022,BUICK,ENCORE
-2019,HIGHLAND RIDGE,HIGHLANDER
-2022,HYUNDAI,TUCSON HYBRID
+7. Bu benzer metinleri ve skorlarını ekranda göster
+Sıraladığın ilk 5 metnin hem indeksini, hem benzerlik skorunu hem de özet metnini ekrana yazdır. Böylece hangilerinin en çok benzediğini anlamış olursun.
 
-
-Teknoloji Stack'i
-Bileşen	Açıklama
-Python	3.8+
-Pandas	Veri işleme (pd.read_csv(), df.apply())
-NLTK	Metin işleme (word_tokenize, PorterStemmer, WordNetLemmatizer)
-Google Colab	Bulut tabanlı çalışma ortamı (Ücretsiz GPU desteği)
-
-
-
-Repo Kurulumu
-Adım 1: Repo Klonlama
-bash
-git clone https://github.com/kullanici_adi/arac-model-isleme.git
-cd arac-model-isleme
-Adım 2: Gereksinimlerin Yüklenmesi
-bash
-pip install -r requirements.txt
-Adım 3: Script Çalıştırma
-bash
-python process_models.py --input car_models.csv --output processed_models.csv
-
-
-KOD YAPISI
-
-process_models.py
-python
+Gerekli Kütüphaneleri İçe Aktar
 import pandas as pd
-import nltk
-from nltk.stem import PorterStemmer, WordNetLemmatizer
-from nltk.tokenize import word_tokenize
-import argparse
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+import numpy as np
 
-def main():
-    # Argümanları parse et
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--input", help="Input CSV file path")
-    parser.add_argument("--output", help="Output CSV file path")
-    args = parser.parse_args()
+Veri Setini Yükle
+python
+df_investigations = pd.read_csv("investigations.csv")
 
-    # NLTK verilerini yükle
-    nltk.download('punkt')
-    nltk.download('wordnet')
+3. Eksik Değerleri Temizle
+python
+df_investigations['SUMMARY'] = df_investigations['SUMMARY'].fillna("")
 
-    # Veriyi işle
-    df = pd.read_csv(args.input)
-    df['cleaned'] = df['model'].apply(clean_text)
-    df['stemmed'], df['lemmatized'] = zip(*df['cleaned'].apply(process_text))
-    df.to_csv(args.output, index=False)
+4. TF-IDF Vektörleştirme
+python
+vectorizer = TfidfVectorizer(stop_words='english', max_features=1000)
+tfidf_matrix = vectorizer.fit_transform(df_investigations['SUMMARY'])
 
-if __name__ == "__main__":
-    main(
+5. Cosine Similarity Hesapla
+python
+similarity_matrix_tfidf = cosine_similarity(tfidf_matrix)
 
+6. İlk Metin İçin En Benzer 5 Metni Göster
+python
+similarities = similarity_matrix_tfidf[0]
+similar_indices = np.argsort(similarities)[::-1][1:6]  # ilk metin hariç
 
+for idx in similar_indices:
+    print(f"Metin {idx} - Benzerlik Skoru: {similarities[idx]:.4f}")
+    print("Metin İçeriği:")
+    print(df_investigations['SUMMARY'].iloc[idx])
+    print("-" * 100)
 
-    Veri İşleme Akışı
-    graph TD
-    A[Raw CSV] --> B[Pandas ile Okuma]
-    B --> C[Metin Temizleme]
-    C --> D[Stemming]
-    C --> E[Lemmatization]
-    D --> F[Çıktı CSV]
-    E --> F
-
-
-    Sonuçlar
-Metric	Değer
-İşlenen Kayıt	50,000+
-İşlem Süresi	< 2 dakika
-Boyut Küçülmesi	%40
-
-
-Word2Vec Vektörleştirme  
-boyuttan dolayı eğitim için kullandığım kodlar ;
-from gensim.models import Word2Vec
-
-# Örnek: lemmatized_texts ve stemmed_texts hazır kabul ediliyor
-# parametre setleri
-param_sets = [
-    {'vector_size': 100, 'window': 5, 'min_count': 2, 'sg': 0},
-    {'vector_size': 100, 'window': 5, 'min_count': 2, 'sg': 1},
-    {'vector_size': 200, 'window': 5, 'min_count': 2, 'sg': 0},
-    {'vector_size': 200, 'window': 5, 'min_count': 2, 'sg': 1},
-    {'vector_size': 100, 'window': 10, 'min_count': 2, 'sg': 0},
-    {'vector_size': 100, 'window': 10, 'min_count': 2, 'sg': 1},
-    {'vector_size': 200, 'window': 10, 'min_count': 2, 'sg': 0},
-    {'vector_size': 200, 'window': 10, 'min_count': 2, 'sg': 1},
-]
-
-def train_and_show_models(texts, param_sets, model_name_prefix):
-    models = {}
-    for i, params in enumerate(param_sets):
-        print(f"\n{'='*40}")
-        print(f"Training {model_name_prefix} model {i+1} with parameters:")
-        for key, val in params.items():
-            print(f"  {key}: {val}")
-        model = Word2Vec(
-            sentences=texts,
-            vector_size=params['vector_size'],
-            window=params['window'],
-            min_count=params['min_count'],
-            sg=params['sg'],
-            workers=4,
-            epochs=10
-        )
-        model_name = f"{model_name_prefix}_model_{i+1}"
-        models[model_name] = model
-        print(f"Model {model_name} training completed.")
-    return models
-
-# Örnek eğitim (lemmatized_texts ve stemmed_texts değişkenlerin hazır olmalı)
-lemmatized_models = train_and_show_models(lemmatized_texts, param_sets, 'lemmatized')
-stemmed_models = train_and_show_models(stemmed_texts, param_sets, 'stemmed')
-
-# Kaydetme
-for name, model in lemmatized_models.items():
-    model.save(f"{name}.model")
-    print(f"Saved model: {name}.model")
-
-for name, model in stemmed_models.items():
-    model.save(f"{name}.model")
-    print(f"Saved model: {name}.model")
-
-# Modelden örnek çıktı (ilk lemmatized modelde 'example' kelimesinin vektörü)
-word = 'example'
-if word in lemmatized_models['lemmatized_model_1'].wv:
-    print(f"\nVector for '{word}' in lemmatized_model_1:")
-    print(lemmatized_models['lemmatized_model_1'].wv[word])
-else:
-    print(f"\nWord '{word}' not found in lemmatized_model_1 vocabulary.")
- 
+    Bu kodları sırasıyla hücrelere yazarak ve çalıştırılabilir. Sonuç olarak, investigations.csv içindeki ilk özet metne en çok benzeyen 5 metni ve benzerlik skorlarını görebiliriz.
