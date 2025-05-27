@@ -41,3 +41,39 @@ for i, idx in enumerate(top_5_similar_indices[0]):
     score = similarities[0, idx]
     print(f"{i+1}. {investigation['MAKE']} {investigation['MODEL']} {investigation['YEAR']} - Skor: {score:.4f}")
     print("Özet:", investigation['SUMMARY'][:200], "...\n")
+
+İlk 5 Benzer Metin için kullanılan kod
+from sklearn.metrics.pairwise import cosine_similarity
+import numpy as np
+
+
+similarities = similarity_matrix_tfidf[0]
+similar_indices = np.argsort(similarities)[::-1][1:6]  # ilk metin hariç en benzer 5'ini al
+for idx in similar_indices:
+    print(f"Metin {idx} - Benzerlik skoru: {similarities[idx]:.4f}")
+
+TF-IDF ile Benzerlik
+
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+
+vectorizer = TfidfVectorizer(stop_words='english', max_features=1000)
+tfidf_matrix = vectorizer.fit_transform(df_investigations['SUMMARY'].fillna(""))
+similarity_matrix_tfidf = cosine_similarity(tfidf_matrix)
+
+
+ Word2Vec ile Benzerlik
+
+from gensim.models import Word2Vec
+from sklearn.metrics.pairwise import cosine_similarity
+import numpy as np
+
+def get_average_vector(tokens, model):
+    vectors = [model.wv[word] for word in tokens if word in model.wv]
+    return np.mean(vectors, axis=0) if vectors else np.zeros(model.vector_size)
+
+model = lemmatized_models['lemmatized_model_1']  # örnek model
+avg_vectors = np.array([get_average_vector(doc, model) for doc in lemmatized_texts])
+similarity_matrix_w2v = cosine_similarity(avg_vectors)
+
+
